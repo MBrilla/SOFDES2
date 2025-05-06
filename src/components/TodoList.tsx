@@ -1,17 +1,19 @@
 import { useState, useMemo } from 'react'
-import { Input, Button, List, Checkbox, Space, Card, Radio, Empty, Tooltip, DatePicker, Tag, Select, Row, Col, Statistic, Dropdown, Menu, Typography, Drawer } from 'antd'
-import { DeleteOutlined, SearchOutlined, ClearOutlined, DragOutlined, PlusOutlined, DownOutlined, SortAscendingOutlined, SortDescendingOutlined, EditOutlined, CommentOutlined, UserOutlined } from '@ant-design/icons'
+import { Input, Button, List, Checkbox, Space, Card, Radio, Empty, DatePicker, Tag, Select, Row, Col, Statistic, Dropdown, Menu, Typography, Drawer, theme, Form } from 'antd'
+import { DeleteOutlined, SearchOutlined, PlusOutlined, DownOutlined, SortAscendingOutlined, SortDescendingOutlined, EditOutlined, CommentOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
 import type { DropResult } from 'react-beautiful-dnd'
 import { useTodo } from '../context/TodoContext'
 import AddTodoDrawer from './AddTodoDrawer'
 import dayjs from 'dayjs'
 import { motion } from 'framer-motion'
-import AdvancedFilters from './AdvancedFilters'
 import TaskComments from './TaskComments'
+import { useTheme } from '../context/ThemeContext'
 
 const { Option } = Select
 const { Text } = Typography
+const { useToken } = theme
+const { TextArea } = Input
 
 type FilterType = 'all' | 'active' | 'completed'
 type PriorityType = 'low' | 'medium' | 'high'
@@ -20,30 +22,37 @@ type SortOrder = 'asc' | 'desc'
 
 const MotionCard = motion(Card)
 
+interface EditFormValues {
+  text: string
+  description?: string
+  category?: string
+  priority?: PriorityType
+  dueDate?: dayjs.Dayjs
+}
+
 export default function TodoList() {
   const { 
     todos, 
     categories,
     deleteTodo,
     toggleTodo,
-    updateDueDate,
-    updateCategory,
-    updatePriority,
+    updateTodo,
     addComment,
-    assignTodo,
     getFilteredTodos
   } = useTodo()
+  const { isDarkMode } = useTheme()
+  const { token } = useToken()
+  const [form] = Form.useForm<EditFormValues>()
 
   const [filter, setFilter] = useState<FilterType>('all')
   const [searchText, setSearchText] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [drawerVisible, setDrawerVisible] = useState(false)
-  const [priorityFilter, setPriorityFilter] = useState<PriorityType | ''>('')
   const [sortBy, setSortBy] = useState<SortType>('createdAt')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
-  const [selectedTodos, setSelectedTodos] = useState<Set<number>>(new Set())
-  const [editingTodo, setEditingTodo] = useState<number | null>(null)
-  const [selectedTodo, setSelectedTodo] = useState<number | null>(null)
+  const [selectedTodos, setSelectedTodos] = useState<Set<string>>(new Set())
+  const [editingTodo, setEditingTodo] = useState<string | null>(null)
+  const [selectedTodo, setSelectedTodo] = useState<string | null>(null)
   const [filters, setFilters] = useState({
     dateRange: null as [Date, Date] | null,
     categories: [] as string[],
@@ -60,12 +69,6 @@ export default function TodoList() {
     const items = Array.from(todos)
     const [reorderedItem] = items.splice(result.source.index, 1)
     items.splice(result.destination.index, 0, reorderedItem)
-
-    // Update todos order in context
-    items.forEach(() => {
-      // You might want to add a reorder function to the context
-      // For now, we'll just update the local state
-    })
   }
 
   const filteredTodos = getFilteredTodos(filters)
@@ -78,19 +81,15 @@ export default function TodoList() {
     setFilters(newFilters)
   }
 
-  const handleComment = (todoId: number) => {
+  const handleComment = (todoId: string) => {
     setSelectedTodo(todoId)
   }
 
   const handleAddComment = (text: string) => {
     if (selectedTodo) {
-      addComment(selectedTodo, text, 'Current User') // Replace with actual user
+      addComment(selectedTodo, text)
       setSelectedTodo(null)
     }
-  }
-
-  const handleAssign = (todoId: number, assignee: string) => {
-    assignTodo(todoId, assignee)
   }
 
   const stats = useMemo(() => {
@@ -132,7 +131,6 @@ export default function TodoList() {
         selectedTodos.forEach(id => deleteTodo(id))
         break
       case 'priority':
-        // You might want to add a bulk priority update feature
         break
     }
     setSelectedTodos(new Set())
@@ -155,21 +153,129 @@ export default function TodoList() {
     </Menu>
   )
 
+  const handleEdit = (todoId: string) => {
+    const todo = todos.find(t => t.id === todoId)
+    if (todo) {
+      setEditingTodo(todoId)
+      form.setFieldsValue({
+        text: todo.text,
+        description: todo.description,
+        category: todo.category,
+        priority: todo.priority,
+        dueDate: todo.dueDate ? dayjs(todo.dueDate) : undefined
+      })
+    }
+  }
+
+  const handleSaveEdit = async () => {
+    try {
+      const values = await form.validateFields()
+      if (editingTodo) {
+        updateTodo(editingTodo, {
+          ...values,
+          dueDate: values.dueDate
+        })
+        setEditingTodo(null)
+        form.resetFields()
+      }
+    } catch (error) {
+      console.error('Validation failed:', error)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTodo(null)
+    form.resetFields()
+  }
+
+  const renderEditForm = (todo: any) => (
+    <Form
+      form={form}
+      layout="vertical"
+      initialValues={{
+        text: todo.text,
+        description: todo.description,
+        category: todo.category,
+        priority: todo.priority,
+        dueDate: todo.dueDate ? dayjs(todo.dueDate) : undefined
+      }}
+    >
+      <Form.Item
+        name="text"
+        rules={[{ required: true, message: 'Please enter task text' }]}
+      >
+        <Input placeholder="Task text" />
+      </Form.Item>
+      <Form.Item name="description">
+        <TextArea
+          placeholder="Add description"
+          autoSize={{ minRows: 2, maxRows: 4 }}
+        />
+      </Form.Item>
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item name="category">
+            <Select placeholder="Category" allowClear>
+              {categories.map(category => (
+                <Option key={category.id} value={category.name}>
+                  {category.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name="priority">
+            <Select placeholder="Priority" allowClear>
+              <Option value="high">High</Option>
+              <Option value="medium">Medium</Option>
+              <Option value="low">Low</Option>
+            </Select>
+          </Form.Item>
+        </Col>
+      </Row>
+      <Form.Item name="dueDate">
+        <DatePicker
+          style={{ width: '100%' }}
+          placeholder="Due date"
+          allowClear
+        />
+      </Form.Item>
+      <Form.Item>
+        <Space>
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            onClick={handleSaveEdit}
+          >
+            Save
+          </Button>
+          <Button
+            icon={<CloseOutlined />}
+            onClick={handleCancelEdit}
+          >
+            Cancel
+          </Button>
+        </Space>
+      </Form.Item>
+    </Form>
+  )
+
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <Row gutter={[16, 16]} justify="center">
-          <Col span={24} style={{ textAlign: 'center' }}>
+          <Col xs={24} sm={12} md={8} lg={6}>
             <Button 
               type="primary" 
               icon={<PlusOutlined />} 
               onClick={() => setDrawerVisible(true)}
               size="large"
-              style={{ width: '200px' }}
+              block
             >
               Add Todo
             </Button>
@@ -225,208 +331,148 @@ export default function TodoList() {
       >
         <Card>
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-            <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
-              <Space wrap>
+            <Row gutter={[16, 16]} align="middle">
+              <Col xs={24} sm={12} md={6}>
                 <Input
                   placeholder="Search todos..."
                   prefix={<SearchOutlined />}
                   value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  style={{ width: 200 }}
-                  size="large"
-                />
-                <Select
-                  placeholder="Filter by category"
-                  value={selectedCategory || undefined}
-                  onChange={setSelectedCategory}
-                  style={{ width: 150 }}
+                  onChange={e => setSearchText(e.target.value)}
                   allowClear
-                  size="large"
+                />
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Select
+                  style={{ width: '100%' }}
+                  placeholder="Filter by category"
+                  value={selectedCategory}
+                  onChange={setSelectedCategory}
+                  allowClear
                 >
                   {categories.map(category => (
-                    <Option key={category} value={category}>{category}</Option>
+                    <Option key={category.id} value={category.name}>{category.name}</Option>
                   ))}
                 </Select>
-                <Select
-                  placeholder="Priority"
-                  value={priorityFilter || undefined}
-                  onChange={setPriorityFilter}
-                  style={{ width: 120 }}
-                  allowClear
-                  size="large"
-                >
-                  <Option value="high">High</Option>
-                  <Option value="medium">Medium</Option>
-                  <Option value="low">Low</Option>
-                </Select>
-                <Dropdown overlay={sortMenu}>
-                  <Button size="large">
-                    Sort by <DownOutlined />
-                  </Button>
-                </Dropdown>
-                <Button
-                  icon={sortOrder === 'asc' ? <SortAscendingOutlined /> : <SortDescendingOutlined />}
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  size="large"
-                />
-              </Space>
-              <Space>
-                {selectedTodos.size > 0 && (
-                  <>
-                    <Button
-                      onClick={() => handleBulkAction('complete')}
-                      size="large"
-                    >
-                      Complete Selected
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Radio.Group value={filter} onChange={e => setFilter(e.target.value)}>
+                  <Radio.Button value="all">All</Radio.Button>
+                  <Radio.Button value="active">Active</Radio.Button>
+                  <Radio.Button value="completed">Completed</Radio.Button>
+                </Radio.Group>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Space>
+                  <Dropdown overlay={sortMenu}>
+                    <Button>
+                      Sort by <DownOutlined />
                     </Button>
-                    <Button
-                      danger
-                      onClick={() => handleBulkAction('delete')}
-                      size="large"
-                    >
-                      Delete Selected
-                    </Button>
-                  </>
-                )}
-                <Tooltip title="Clear completed">
+                  </Dropdown>
                   <Button
-                    icon={<ClearOutlined />}
-                    onClick={clearCompleted}
-                    disabled={stats.completed === 0}
-                    size="large"
+                    icon={sortOrder === 'asc' ? <SortAscendingOutlined /> : <SortDescendingOutlined />}
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                   />
-                </Tooltip>
-              </Space>
-            </Space>
+                </Space>
+              </Col>
+            </Row>
 
-            <Radio.Group value={filter} onChange={(e) => setFilter(e.target.value)} size="large">
-              <Radio.Button value="all">All</Radio.Button>
-              <Radio.Button value="active">Active</Radio.Button>
-              <Radio.Button value="completed">Completed</Radio.Button>
-            </Radio.Group>
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="todos">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef}>
+                    {filteredTodos.length === 0 ? (
+                      <Empty description="No todos found" />
+                    ) : (
+                      <List
+                        dataSource={filteredTodos}
+                        renderItem={(todo, index) => (
+                          <Draggable key={todo.id} draggableId={todo.id} index={index}>
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                              >
+                                <Card
+                                  style={{
+                                    marginBottom: 16,
+                                    backgroundColor: todo.completed 
+                                      ? (isDarkMode ? token.colorBgContainerDisabled : '#f5f5f5')
+                                      : (isDarkMode ? token.colorBgContainer : 'white')
+                                  }}
+                                >
+                                  {editingTodo === todo.id ? (
+                                    renderEditForm(todo)
+                                  ) : (
+                                    <Row gutter={[16, 16]} align="middle">
+                                      <Col xs={24} sm={24} md={2}>
+                                        <Checkbox
+                                          checked={todo.completed}
+                                          onChange={() => toggleTodo(todo.id)}
+                                        />
+                                      </Col>
+                                      <Col xs={24} sm={24} md={14}>
+                                        <Space direction="vertical" style={{ width: '100%' }}>
+                                          <Text delete={todo.completed}>{todo.text}</Text>
+                                          {todo.description && (
+                                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                                              {todo.description}
+                                            </Text>
+                                          )}
+                                          <Space wrap>
+                                            {todo.category && (
+                                              <Tag color="blue">{todo.category}</Tag>
+                                            )}
+                                            {todo.priority && (
+                                              <Tag color={getPriorityColor(todo.priority)}>
+                                                {todo.priority}
+                                              </Tag>
+                                            )}
+                                            {todo.dueDate && (
+                                              <Tag color="purple">
+                                                Due: {todo.dueDate.format('MMM D, YYYY')}
+                                              </Tag>
+                                            )}
+                                          </Space>
+                                        </Space>
+                                      </Col>
+                                      <Col xs={24} sm={24} md={8}>
+                                        <Space wrap>
+                                          <Button
+                                            type="text"
+                                            icon={<CommentOutlined />}
+                                            onClick={() => handleComment(todo.id)}
+                                          />
+                                          <Button
+                                            type="text"
+                                            icon={<EditOutlined />}
+                                            onClick={() => handleEdit(todo.id)}
+                                          />
+                                          <Button
+                                            type="text"
+                                            danger
+                                            icon={<DeleteOutlined />}
+                                            onClick={() => deleteTodo(todo.id)}
+                                          />
+                                        </Space>
+                                      </Col>
+                                    </Row>
+                                  )}
+                                </Card>
+                              </div>
+                            )}
+                          </Draggable>
+                        )}
+                      />
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           </Space>
         </Card>
       </motion.div>
-
-      <AdvancedFilters onFilterChange={handleFilterChange} />
-
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="todos">
-          {(provided) => (
-            <div {...provided.droppableProps} ref={provided.innerRef}>
-              <List
-                dataSource={filteredTodos}
-                locale={{
-                  emptyText: <Empty description="No todos found" />
-                }}
-                renderItem={(todo, index) => (
-                  <Draggable key={todo.id} draggableId={String(todo.id)} index={index}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                      >
-                        <List.Item style={{ marginBottom: '16px' }}>
-                          <MotionCard 
-                            style={{ 
-                              width: '100%',
-                              borderLeft: todo.priority ? `4px solid ${getPriorityColor(todo.priority)}` : undefined,
-                              opacity: selectedTodos.has(todo.id) ? 0.7 : 1
-                            }}
-                            whileHover={{ scale: 1.01 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <Space style={{ width: '100%', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-                              <Space>
-                                <Checkbox
-                                  checked={selectedTodos.has(todo.id)}
-                                  onChange={(e) => {
-                                    const newSelected = new Set(selectedTodos)
-                                    if (e.target.checked) {
-                                      newSelected.add(todo.id)
-                                    } else {
-                                      newSelected.delete(todo.id)
-                                    }
-                                    setSelectedTodos(newSelected)
-                                  }}
-                                />
-                                <DragOutlined style={{ cursor: 'grab', fontSize: '18px' }} />
-                                <Checkbox
-                                  checked={todo.completed}
-                                  onChange={() => toggleTodo(todo.id)}
-                                />
-                                <Space direction="vertical" size={0}>
-                                  <span style={{ 
-                                    textDecoration: todo.completed ? 'line-through' : 'none',
-                                    color: todo.completed ? '#999' : 'inherit',
-                                    fontSize: '16px'
-                                  }}>
-                                    {todo.text}
-                                  </span>
-                                  <Space size={4}>
-                                    {todo.category && (
-                                      <Tag color="blue">{todo.category}</Tag>
-                                    )}
-                                    {todo.priority && (
-                                      <Tag color={getPriorityColor(todo.priority)}>
-                                        {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)} Priority
-                                      </Tag>
-                                    )}
-                                  </Space>
-                                </Space>
-                              </Space>
-                              <Space wrap>
-                                <DatePicker
-                                  value={todo.dueDate}
-                                  onChange={(date) => updateDueDate(todo.id, date)}
-                                  placeholder="Due date"
-                                  allowClear
-                                  size="large"
-                                />
-                                <Select
-                                  value={todo.category}
-                                  onChange={(value) => updateCategory(todo.id, value)}
-                                  style={{ width: 120 }}
-                                  allowClear
-                                  size="large"
-                                >
-                                  {categories.map(category => (
-                                    <Option key={category} value={category}>{category}</Option>
-                                  ))}
-                                </Select>
-                                <Select
-                                  value={todo.priority}
-                                  onChange={(value) => updatePriority(todo.id, value)}
-                                  style={{ width: 120 }}
-                                  allowClear
-                                  size="large"
-                                >
-                                  <Option value="high">High</Option>
-                                  <Option value="medium">Medium</Option>
-                                  <Option value="low">Low</Option>
-                                </Select>
-                                <Button
-                                  type="text"
-                                  danger
-                                  icon={<DeleteOutlined />}
-                                  onClick={() => deleteTodo(todo.id)}
-                                  size="large"
-                                />
-                              </Space>
-                            </Space>
-                          </MotionCard>
-                        </List.Item>
-                      </div>
-                    )}
-                  </Draggable>
-                )}
-              />
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
 
       <AddTodoDrawer
         open={drawerVisible}
@@ -434,15 +480,15 @@ export default function TodoList() {
       />
 
       <Drawer
-        title="Task Details"
+        title="Comments"
         placement="right"
         onClose={() => setSelectedTodo(null)}
         open={selectedTodo !== null}
-        width={400}
+        width={window.innerWidth <= 768 ? '100%' : 400}
       >
         {selectedTodo && (
           <TaskComments
-            taskId={selectedTodo}
+            taskId={selectedTodo.toString()}
             comments={todos.find(t => t.id === selectedTodo)?.comments || []}
             activities={todos.find(t => t.id === selectedTodo)?.activities || []}
             onAddComment={handleAddComment}

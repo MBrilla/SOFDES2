@@ -29,33 +29,7 @@ export default function CalendarView() {
     }
   }
 
-  const getDateListData = (value: Dayjs) => {
-    return todos.filter(todo => {
-      if (!todo.startDate && !todo.dueDate) return false
-      
-      const start = todo.startDate ? dayjs(todo.startDate) : null
-      const due = todo.dueDate ? dayjs(todo.dueDate) : null
-      
-      if (!start && !due) return false
-      
-      // If only start date exists
-      if (start && !due) {
-        return start.isSame(value, 'day')
-      }
-      
-      // If only due date exists
-      if (!start && due) {
-        return due.isSame(value, 'day')
-      }
-      
-      // If both dates exist, check if the value is between them
-      if (start && due) {
-        return value.isSameOrAfter(start, 'day') && value.isSameOrBefore(due, 'day')
-      }
-      
-      return false
-    })
-  }
+
 
   const cellRender: CalendarProps<Dayjs>['cellRender'] = (current, info) => {
     if (info.type !== 'date') return null
@@ -66,13 +40,19 @@ export default function CalendarView() {
     })
 
     return (
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
         {todosForDay.map(todo => (
-          <li key={todo.id}>
-            <Badge
-              status={todo.completed ? 'success' : 'processing'}
-              text={todo.text}
-            />
+          <li key={todo.id} style={{ marginBottom: 4 }}>
+            <Tooltip title={todo.text}>
+              <Badge
+                status={todo.completed ? 'success' : 'processing'}
+                text={
+                  <Text ellipsis style={{ maxWidth: '100%', fontSize: '12px' }}>
+                    {todo.text}
+                  </Text>
+                }
+              />
+            </Tooltip>
           </li>
         ))}
       </ul>
@@ -133,8 +113,8 @@ export default function CalendarView() {
               transition={{ duration: 0.2 }}
             >
               <Space direction="vertical" style={{ width: '100%' }}>
-                <Space>
-                  <Text strong>{todo.text}</Text>
+                <Space wrap>
+                  <Text strong style={{ fontSize: '14px' }}>{todo.text}</Text>
                   {todo.priority && (
                     <Tag color={getPriorityColor(todo.priority)}>
                       {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)} Priority
@@ -167,7 +147,7 @@ export default function CalendarView() {
                     />
                   )}
                 </div>
-                <Space>
+                <Space wrap>
                   {todo.category && (
                     <Tag color="blue">{todo.category}</Tag>
                   )}
@@ -184,10 +164,10 @@ export default function CalendarView() {
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%', padding: '24px' }}>
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Title level={2}>Calendar View</Title>
       
-      <Row gutter={[24, 24]}>
+      <Row gutter={[16, 16]}>
         <Col xs={24} md={16}>
           <MotionCard
             initial={{ opacity: 0, y: 20 }}
@@ -198,18 +178,17 @@ export default function CalendarView() {
               value={selectedDate}
               onChange={setSelectedDate}
               cellRender={cellRender}
-              mode="month"
+              fullscreen={window.innerWidth > 768}
             />
           </MotionCard>
         </Col>
-        
         <Col xs={24} md={8}>
           <MotionCard
-            title={`Timeline - ${selectedDate.format('MMMM YYYY')}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
+            <Title level={4}>Timeline</Title>
             {renderTimeline()}
           </MotionCard>
         </Col>

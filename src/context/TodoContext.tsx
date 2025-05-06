@@ -23,6 +23,7 @@ export interface Activity {
 export interface Todo {
   id: string
   text: string
+  description?: string
   completed: boolean
   startDate?: Dayjs
   dueDate?: Dayjs
@@ -75,6 +76,7 @@ interface TodoContextType {
     priorities: string[]
   }) => Todo[]
   updateCategoryName: (id: string, newName: string) => Promise<void>
+  userName: string
 }
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined)
@@ -99,13 +101,18 @@ export function TodoProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([])
   const [comments, setComments] = useState<CommentType[]>([])
   const [userId, setUserId] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string>('Anonymous')
 
-  // Listen for auth changes and update userId
+  // Listen for auth changes and update userId and userName
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id ?? null)
+      setUserName(session?.user?.user_metadata?.full_name || session?.user?.email || 'Anonymous')
     })
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null)
+      setUserName(data.user?.user_metadata?.full_name || data.user?.email || 'Anonymous')
+    })
     return () => { listener?.subscription.unsubscribe() }
   }, [])
 
@@ -136,23 +143,38 @@ export function TodoProvider({ children }: { children: ReactNode }) {
       setTodos([])
       return
     }
-    const { data, error } = await supabase
+    const { data: todosData, error: todosError } = await supabase
       .from('tasks')
       .select('*')
       .eq('user_id', id)
       .order('created_at', { ascending: false })
-    if (error) {
+
+    const { data: commentsData, error: commentsError } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('user_id', id)
+
+    if (todosError) {
       message.error('Failed to fetch tasks')
       setTodos([])
       return
     }
-    setTodos(
-      (data || []).map(todo => ({
-        ...todo,
-        startDate: todo.start_date ? dayjs(todo.start_date) : undefined,
-        dueDate: todo.due_date ? dayjs(todo.due_date) : undefined,
-      }))
-    )
+
+    // Attach comments to each todo
+    const todosWithComments = (todosData || []).map(todo => ({
+      ...todo,
+      startDate: todo.start_date ? dayjs(todo.start_date) : undefined,
+      dueDate: todo.due_date ? dayjs(todo.due_date) : undefined,
+      comments: (commentsData || []).filter(c => c.task_id === todo.id).map(c => ({
+        id: c.id,
+        text: c.text,
+        author: c.user_id === userId ? userName : c.user_id, // Show full name for current user, user_id for others
+        timestamp: c.created_at ? new Date(c.created_at) : new Date()
+      })),
+      activities: todo.activities || []
+    }))
+
+    setTodos(todosWithComments)
   }
 
   // Categories CRUD
@@ -232,12 +254,36 @@ export function TodoProvider({ children }: { children: ReactNode }) {
 
   const addComment = async (taskId: string, text: string) => {
     if (!userId) return
+    const fullName = userName || 'Anonymous'
     const { error } = await supabase.from('comments').insert([{ task_id: taskId, user_id: userId, text }])
     if (error) {
       message.error('Failed to add comment')
       return
     }
-    fetchComments(taskId)
+    // Update local state
+    setTodos(prev => prev.map(todo => {
+      if (todo.id === taskId) {
+        const newComment = {
+          id: Date.now().toString(),
+          text,
+          author: fullName,
+          timestamp: new Date()
+        }
+        const newActivity = {
+          id: Date.now().toString(),
+          type: 'status_change' as const,
+          description: `Comment added: ${text}`,
+          timestamp: new Date(),
+          user: fullName
+        }
+        return {
+          ...todo,
+          comments: Array.isArray(todo.comments) ? [...todo.comments, newComment] : [newComment],
+          activities: Array.isArray(todo.activities) ? [...todo.activities, newActivity] : [newActivity]
+        }
+      }
+      return todo
+    }))
     message.success('Comment added')
   }
 
@@ -265,6 +311,8 @@ export function TodoProvider({ children }: { children: ReactNode }) {
         priority,
         color,
         status: 'todo',
+        comments: [],
+        activities: []
       }])
       .select()
       .single()
@@ -276,6 +324,8 @@ export function TodoProvider({ children }: { children: ReactNode }) {
       ...data,
       startDate: data.start_date ? dayjs(data.start_date) : undefined,
       dueDate: data.due_date ? dayjs(data.due_date) : undefined,
+      comments: [],
+      activities: []
     }, ...prev])
     message.success('Todo added')
   }
@@ -413,7 +463,8 @@ export function TodoProvider({ children }: { children: ReactNode }) {
       importData,
       clearData,
       assignTodo,
-      getFilteredTodos
+      getFilteredTodos,
+      userName
     }}>
       {children}
     </TodoContext.Provider>

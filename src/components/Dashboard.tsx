@@ -1,6 +1,5 @@
 import { useMemo, useEffect, useState } from 'react'
 import { Card, Row, Col, Statistic, Progress, Space, Typography } from 'antd'
-import { CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined, FireOutlined } from '@ant-design/icons'
 import { useTodo } from '../context/TodoContext'
 import { motion } from 'framer-motion'
 import dayjs from 'dayjs'
@@ -131,8 +130,13 @@ export default function Dashboard() {
         ) : (
           <ul style={{ paddingLeft: 20 }}>
             {topTodos.map(todo => (
-              <li key={todo.id} style={{ marginBottom: 8 }}>
+              <li key={todo.id} style={{ marginBottom: 8, display: 'flex', alignItems: 'center' }}>
                 <span style={{ fontWeight: 500 }}>{todo.text}</span>
+                {todo.comments && todo.comments.length > 0 && (
+                  <span style={{ marginLeft: 12, color: '#888', fontStyle: 'italic', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }}>
+                    comment: "{todo.comments[todo.comments.length - 1].text}"
+                  </span>
+                )}
                 {todo.priority && (
                   <span style={{
                     marginLeft: 8,

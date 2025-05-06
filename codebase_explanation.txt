@@ -1,0 +1,103 @@
+Todo Application Codebase Explanation
+===================================
+
+Core Components:
+---------------
+1. TodoList.tsx
+   - Main component for displaying and managing todos
+   - Features:
+     * Add/Edit/Delete todos
+     * Filter and search functionality
+     * Priority and category management
+     * Drag-and-drop reordering
+     * Statistics dashboard
+     * Comment system integration
+
+2. TaskComments.tsx
+   - Handles comments and activity history for each todo
+   - Features:
+     * Add new comments
+     * Display comment history with author and timestamp
+     * Show activity history (status changes, priority changes, etc.)
+     * Real-time updates
+
+3. Calendar.tsx
+   - Calendar view of todos
+   - Features:
+     * Visual representation of todos on calendar
+     * Timeline view of tasks
+     * Priority color coding
+     * Due date tracking
+
+4. Dashboard.tsx
+   - Overview of todo statistics and top priorities
+   - Features:
+     * Task statistics
+     * Top 5 priority tasks
+     * Latest comments preview
+     * Quick access to important tasks
+
+Context Management:
+-----------------
+1. TodoContext.tsx
+   - Central state management for todos
+   - Handles:
+     * CRUD operations for todos
+     * Comment management
+     * Activity tracking
+     * User state
+     * Data persistence with Supabase
+
+2. ThemeContext.tsx
+   - Manages application theme
+   - Supports:
+     * Light/Dark mode
+     * Theme persistence
+
+Database Structure (Supabase):
+----------------------------
+1. Tables:
+   - tasks: Main todo items
+   - comments: Task comments
+   - activities: Task activity history
+   - profiles: User profiles
+
+Key Features:
+------------
+1. Task Management:
+   - Create, read, update, delete todos
+   - Set priorities (high, medium, low)
+   - Add categories
+   - Set due dates
+   - Mark as complete/incomplete
+
+2. Comments & Activity:
+   - Add comments to tasks
+   - Track task changes
+   - View activity history
+   - Real-time updates
+
+3. Organization:
+   - Filter by status, priority, category
+   - Search functionality
+   - Sort by various criteria
+   - Drag-and-drop reordering
+
+4. UI/UX:
+   - Responsive design
+   - Dark/Light mode
+   - Animated transitions
+   - Intuitive interface
+
+5. Data Persistence:
+   - Real-time sync with Supabase
+   - User authentication
+
+Technical Stack:
+--------------
+- React
+- TypeScript
+- Ant Design (UI components)
+- Framer Motion (animations)
+- Supabase (backend)
+- Day.js (date handling)

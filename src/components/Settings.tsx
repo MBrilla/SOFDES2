@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, Typography, Space, Switch, Divider, Tabs, Button, message, Modal, ColorPicker, Input } from 'antd'
+import { Card, Typography, Space, Switch, Divider, Tabs, Button, message, Modal, ColorPicker, Input, Row, Col } from 'antd'
 import { SaveOutlined, ReloadOutlined, ExportOutlined, ImportOutlined, LogoutOutlined } from '@ant-design/icons'
 import { useTheme } from '../context/ThemeContext'
 import { ColorCustomizer } from './ColorCustomizer'
@@ -160,18 +160,27 @@ export function Settings({ onColorChange, currentColors, useCustomColors, setUse
       children: (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <Card title="Appearance">
-          <Input
-                placeholder="Your Name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                style={{ maxWidth: 300, marginRight: 8 }}
-              />
-              <Button type="primary" onClick={handleUpdateName} loading={nameLoading}>
-                Update Name
-              </Button>
             <Space direction="vertical" style={{ width: '100%' }}>
+              <Row gutter={[16, 16]} align="middle">
+                <Col xs={24} sm={16}>
+                  <Input
+                    placeholder="Your Name"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                  />
+                </Col>
+                <Col xs={24} sm={8}>
+                  <Button 
+                    type="primary" 
+                    onClick={handleUpdateName} 
+                    loading={nameLoading}
+                    block
+                  >
+                    Update Name
+                  </Button>
+                </Col>
+              </Row>
               <Space style={{ justifyContent: 'space-between', width: '100%' }}>
-                
                 <Text>Dark Mode</Text>
                 <Switch checked={isDarkMode} onChange={toggleDarkMode} />
               </Space>
@@ -191,12 +200,14 @@ export function Settings({ onColorChange, currentColors, useCustomColors, setUse
             </Space>
           </Card>
 
-          
-
-          <Card title="General">
+          <Card>
             <Space direction="vertical" style={{ width: '100%' }}>
-              
-              <Button icon={<LogoutOutlined />} danger onClick={handleLogout}>
+              <Button 
+                icon={<LogoutOutlined />} 
+                danger 
+                onClick={handleLogout}
+                block
+              >
                 Log Out
               </Button>
             </Space>
@@ -212,7 +223,7 @@ export function Settings({ onColorChange, currentColors, useCustomColors, setUse
           <Card 
             title="UI Colors"
             extra={
-              <Space>
+              <Space wrap>
                 <Button
                   type="primary"
                   icon={<SaveOutlined />}
@@ -234,51 +245,64 @@ export function Settings({ onColorChange, currentColors, useCustomColors, setUse
                 <Text>Use Custom UI Colors</Text>
                 <Switch checked={useCustomColors} onChange={setUseCustomColors} />
               </Space>
-              <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <Text>Background Color</Text>
-                <ColorPicker
-                  value={currentColors.background}
-                  onChange={(color) => handleColorChange('background', color.toHexString())}
-                  disabled={!useCustomColors}
-                />
-              </Space>
-              <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <Text>Navbar Color</Text>
-                <ColorPicker
-                  value={currentColors.navbar}
-                  onChange={(color) => handleColorChange('navbar', color.toHexString())}
-                  disabled={!useCustomColors}
-                />
-              </Space>
-              <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <Text>Sidebar Color</Text>
-                <ColorPicker
-                  value={currentColors.sidebar}
-                  onChange={(color) => handleColorChange('sidebar', color.toHexString())}
-                  disabled={!useCustomColors}
-                />
-              </Space>
-              <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <Text>Card Background</Text>
-                <ColorPicker
-                  value={currentColors.card}
-                  onChange={(color) => handleColorChange('card', color.toHexString())}
-                />
-              </Space>
-              <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <Text>Text Color</Text>
-                <ColorPicker
-                  value={currentColors.text}
-                  onChange={(color) => handleColorChange('text', color.toHexString())}
-                />
-              </Space>
-              <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <Text>Border Color</Text>
-                <ColorPicker
-                  value={currentColors.border}
-                  onChange={(color) => handleColorChange('border', color.toHexString())}
-                />
-              </Space>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} sm={12}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <Text>Background Color</Text>
+                      <ColorPicker
+                        value={currentColors.background}
+                        onChange={(color) => handleColorChange('background', color.toHexString())}
+                        disabled={!useCustomColors}
+                      />
+                    </Space>
+                    <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <Text>Navbar Color</Text>
+                      <ColorPicker
+                        value={currentColors.navbar}
+                        onChange={(color) => handleColorChange('navbar', color.toHexString())}
+                        disabled={!useCustomColors}
+                      />
+                    </Space>
+                    <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <Text>Sidebar Color</Text>
+                      <ColorPicker
+                        value={currentColors.sidebar}
+                        onChange={(color) => handleColorChange('sidebar', color.toHexString())}
+                        disabled={!useCustomColors}
+                      />
+                    </Space>
+                  </Space>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <Text>Card Background</Text>
+                      <ColorPicker
+                        value={currentColors.card}
+                        onChange={(color) => handleColorChange('card', color.toHexString())}
+                        disabled={!useCustomColors}
+                      />
+                    </Space>
+                    <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <Text>Text Color</Text>
+                      <ColorPicker
+                        value={currentColors.text}
+                        onChange={(color) => handleColorChange('text', color.toHexString())}
+                        disabled={!useCustomColors}
+                      />
+                    </Space>
+                    <Space style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <Text>Border Color</Text>
+                      <ColorPicker
+                        value={currentColors.border}
+                        onChange={(color) => handleColorChange('border', color.toHexString())}
+                        disabled={!useCustomColors}
+                      />
+                    </Space>
+                  </Space>
+                </Col>
+              </Row>
             </Space>
           </Card>
 
@@ -306,12 +330,13 @@ export function Settings({ onColorChange, currentColors, useCustomColors, setUse
                 <div
                   style={{
                     display: 'flex',
+                    flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
                     gap: 16
                   }}
                 >
                   <div
                     style={{
-                      width: 200,
+                      width: window.innerWidth <= 768 ? '100%' : 200,
                       padding: 16,
                       backgroundColor: currentColors.sidebar,
                       color: currentColors.text,
@@ -352,7 +377,7 @@ export function Settings({ onColorChange, currentColors, useCustomColors, setUse
       children: (
         <Card>
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
-            <Title level={4}>Todo App</Title>
+            <Title level={4}>Focus</Title>
             <Text>Version 1.0.0</Text>
             <Text type="secondary">A modern task management application with customizable themes and features.</Text>
             <Divider />
@@ -364,36 +389,40 @@ export function Settings({ onColorChange, currentColors, useCustomColors, setUse
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Space style={{ justifyContent: 'space-between', width: '100%' }}>
-        <Title level={2}>Settings</Title>
-        <Space>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            onClick={handleSaveSettings}
-          >
-            Save Settings
-          </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={handleResetSettings}
-          >
-            Reset to Default
-          </Button>
-          <Button
-            icon={<ExportOutlined />}
-            onClick={handleExportSettings}
-          >
-            Export
-          </Button>
-          <Button
-            icon={<ImportOutlined />}
-            onClick={handleImportSettings}
-          >
-            Import
-          </Button>
-        </Space>
-      </Space>
+      <Row gutter={[16, 16]} align="middle">
+        <Col xs={24} sm={12}>
+          <Title level={2}>Settings</Title>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Space wrap style={{ justifyContent: 'flex-end', width: '100%' }}>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={handleSaveSettings}
+            >
+              Save
+            </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleResetSettings}
+            >
+              Reset
+            </Button>
+            <Button
+              icon={<ExportOutlined />}
+              onClick={handleExportSettings}
+            >
+              Export
+            </Button>
+            <Button
+              icon={<ImportOutlined />}
+              onClick={handleImportSettings}
+            >
+              Import
+            </Button>
+          </Space>
+        </Col>
+      </Row>
       <Tabs
         defaultActiveKey="general"
         items={items}

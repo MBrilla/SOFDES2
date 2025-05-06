@@ -1,15 +1,12 @@
 import { useState } from 'react'
-import { Card, Input, Button, List, Avatar, Space, Typography, Divider } from 'antd'
-import { SendOutlined, UserOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { Card, Input, Button, List, Typography, Space, Avatar } from 'antd'
+import { SendOutlined, UserOutlined, ClockCircleOutlined, CheckCircleOutlined, TagOutlined, UserSwitchOutlined } from '@ant-design/icons'
 import { motion } from 'framer-motion'
+import { useTodo } from '../context/TodoContext'
 import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
-
-dayjs.extend(relativeTime)
 
 const { TextArea } = Input
 const { Text } = Typography
-const MotionCard = motion(Card)
 
 interface Comment {
   id: string
@@ -27,16 +24,20 @@ interface Activity {
 }
 
 interface TaskCommentsProps {
-  taskId: number
+  taskId: string
   comments: Comment[]
   activities: Activity[]
   onAddComment: (text: string) => void
 }
 
-export default function TaskComments({ comments, activities, onAddComment }: TaskCommentsProps) {
-  const [newComment, setNewComment] = useState('')
+const MotionCard = motion(Card)
 
-  const handleSubmit = () => {
+export default function TaskComments({ taskId, comments, activities, onAddComment }: TaskCommentsProps) {
+  const [newComment, setNewComment] = useState('')
+  const { todos } = useTodo()
+  const todo = todos.find(t => t.id === taskId)
+
+  const handleAddComment = () => {
     if (newComment.trim()) {
       onAddComment(newComment.trim())
       setNewComment('')
@@ -46,104 +47,102 @@ export default function TaskComments({ comments, activities, onAddComment }: Tas
   const getActivityIcon = (type: Activity['type']) => {
     switch (type) {
       case 'status_change':
-        return '🔄'
+        return <CheckCircleOutlined style={{ color: '#1890ff' }} />
       case 'priority_change':
-        return '⭐'
+        return <TagOutlined style={{ color: '#faad14' }} />
       case 'category_change':
-        return '🏷️'
+        return <TagOutlined style={{ color: '#52c41a' }} />
       case 'assignment_change':
-        return '👤'
+        return <UserSwitchOutlined style={{ color: '#722ed1' }} />
       default:
-        return '📝'
+        return <ClockCircleOutlined />
     }
   }
 
+  const formatAuthor = (author: string) => {
+    return author === 'Profile' ? 'Profile' : author
+  }
+
   return (
-    <MotionCard
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <div>
-          <Text strong style={{ fontSize: '16px' }}>Comments</Text>
-          <List
-            dataSource={comments}
-            renderItem={comment => (
-              <List.Item>
-                <List.Item.Meta
-                  avatar={<Avatar icon={<UserOutlined />} />}
-                  title={
-                    <Space>
-                      <Text strong>{comment.author}</Text>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {dayjs(comment.timestamp).fromNow()}
-                      </Text>
-                    </Space>
-                  }
-                  description={comment.text}
-                />
-              </List.Item>
-            )}
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <MotionCard
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <TextArea
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            placeholder="Add a comment..."
+            autoSize={{ minRows: 2, maxRows: 4 }}
           />
-          <Space.Compact style={{ width: '100%', marginTop: '16px' }}>
-            <TextArea
-              value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              placeholder="Add a comment..."
-              autoSize={{ minRows: 2, maxRows: 4 }}
-              onPressEnter={e => {
-                if (!e.shiftKey) {
-                  e.preventDefault()
-                  handleSubmit()
+          <Button
+            type="primary"
+            icon={<SendOutlined />}
+            onClick={handleAddComment}
+            disabled={!newComment.trim()}
+          >
+            Add Comment
+          </Button>
+        </Space>
+      </MotionCard>
+
+      <MotionCard
+        title="Comments"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+      >
+        <List
+          dataSource={comments}
+          renderItem={comment => (
+            <List.Item>
+              <List.Item.Meta
+                avatar={<Avatar icon={<UserOutlined />} />}
+                title={
+                  <Space>
+                    <Text strong>{formatAuthor(comment.author)}</Text>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {dayjs(comment.timestamp).format('MMM D, YYYY h:mm A')}
+                    </Text>
+                  </Space>
                 }
-              }}
-            />
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              onClick={handleSubmit}
-              disabled={!newComment.trim()}
-            />
-          </Space.Compact>
-        </div>
+                description={comment.text}
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: 'No comments yet' }}
+        />
+      </MotionCard>
 
-        <Divider />
-
-        <div>
-          <Text strong style={{ fontSize: '16px' }}>Activity History</Text>
-          <List
-            dataSource={activities}
-            renderItem={activity => (
-              <List.Item>
-                <List.Item.Meta
-                  avatar={
-                    <Avatar style={{ backgroundColor: '#f0f2f5' }}>
-                      {getActivityIcon(activity.type)}
-                    </Avatar>
-                  }
-                  title={
-                    <Space>
-                      <Text>{activity.description}</Text>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        by {activity.user}
-                      </Text>
-                    </Space>
-                  }
-                  description={
-                    <Space>
-                      <ClockCircleOutlined />
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {dayjs(activity.timestamp).fromNow()}
-                      </Text>
-                    </Space>
-                  }
-                />
-              </List.Item>
-            )}
-          />
-        </div>
-      </Space>
-    </MotionCard>
+      <MotionCard
+        title="Activity History"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+      >
+        <List
+          dataSource={activities}
+          renderItem={activity => (
+            <List.Item>
+              <List.Item.Meta
+                avatar={getActivityIcon(activity.type)}
+                title={
+                  <Space>
+                    <Text strong>{formatAuthor(activity.user)}</Text>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {dayjs(activity.timestamp).format('MMM D, YYYY h:mm A')}
+                    </Text>
+                  </Space>
+                }
+                description={activity.description}
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: 'No activity yet' }}
+        />
+      </MotionCard>
+    </Space>
   )
 } 
