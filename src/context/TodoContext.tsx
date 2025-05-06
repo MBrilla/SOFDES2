@@ -62,7 +62,7 @@ interface TodoContextType {
   fetchComments: (taskId: string) => Promise<void>
   addComment: (taskId: string, text: string) => Promise<void>
   deleteComment: (id: string) => Promise<void>
-  addTodo: (text: string, category?: string, startDate?: Dayjs, dueDate?: Dayjs, priority?: 'low' | 'medium' | 'high', color?: string) => Promise<void>
+  addTodo: (text: string, category: string, startDate?: Dayjs, dueDate?: Dayjs, priority?: 'low' | 'medium' | 'high', color?: string) => Promise<void>
   deleteTodo: (id: string) => Promise<void>
   toggleTodo: (id: string) => Promise<void>
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<void>
@@ -299,24 +299,24 @@ export function TodoProvider({ children }: { children: ReactNode }) {
   const addTodo: TodoContextType['addTodo'] = async (text, category, startDate, dueDate, priority, color) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+    const todoPayload = {
+      user_id: user.id,
+      text: text,
+      completed: false,
+      category: category || null,
+      start_date: startDate ? startDate.format('YYYY-MM-DD') : null,
+      due_date: dueDate ? dueDate.format('YYYY-MM-DD') : null,
+      priority: priority || null,
+      color: color || null
+    }
+    console.log('Inserting todo:', todoPayload)
     const { data, error } = await supabase
       .from('tasks')
-      .insert([{
-        user_id: user.id,
-        text,
-        completed: false,
-        category,
-        start_date: startDate ? startDate.format('YYYY-MM-DD') : null,
-        due_date: dueDate ? dueDate.format('YYYY-MM-DD') : null,
-        priority,
-        color,
-        status: 'todo',
-        comments: [],
-        activities: []
-      }])
+      .insert([todoPayload])
       .select()
       .single()
     if (error) {
+      console.error('Supabase error:', error)
       message.error('Failed to add todo')
       return
     }

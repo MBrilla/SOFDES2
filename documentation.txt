@@ -1,0 +1,190 @@
+# Focus - Task Management Application Documentation
+
+## 1. Implementation
+
+### 1.1 Authentication System
+```typescript
+// src/components/AuthForm.tsx
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setError('')
+  setLoading(true)
+  let error
+  if (isLogin) {
+    const res = await supabase.auth.signInWithPassword({ email, password })
+    error = res.error
+  } else {
+    const res = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } }
+    })
+    error = res.error
+  }
+  setLoading(false)
+  if (error) setError(error.message)
+  else message.success(isLogin ? 'Logged in!' : 'Check your email to confirm sign up!')
+}
+```
+This code handles user authentication, supporting both login and signup functionality using Supabase authentication.
+
+### 1.2 Logout Process
+```typescript
+// src/components/Settings.tsx
+const handleLogout = async () => {
+  onLogout()
+  // Wait for 3 seconds before signing out
+  await new Promise(resolve => setTimeout(resolve, 3000))
+  await supabase.auth.signOut()
+}
+
+// src/components/LogoutScreen.tsx
+const [countdown, setCountdown] = useState(3)
+useEffect(() => {
+  const timer = setInterval(() => {
+    setCountdown(prev => {
+      if (prev <= 1) {
+        clearInterval(timer)
+        return 0
+      }
+      return prev - 1
+    })
+  }, 1000)
+  return () => clearInterval(timer)
+}, [])
+```
+Implements a smooth logout process with a 3-second countdown timer and visual feedback.
+
+### 1.3 Theme Management
+```typescript
+// src/context/ThemeContext.tsx
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode')
+    return saved ? JSON.parse(saved) : false
+  })
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(isDarkMode))
+  }, [isDarkMode])
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode)
+  }
+}
+```
+Manages application theme state with dark/light mode support and persistence.
+
+### 1.4 Todo Management
+```typescript
+// src/context/TodoContext.tsx
+const fetchTodos = async (uid?: string) => {
+  const id = uid || userId
+  if (!id) {
+    setTodos([])
+    return
+  }
+  const { data: todosData, error: todosError } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', id)
+    .order('created_at', { ascending: false })
+
+  const { data: commentsData, error: commentsError } = await supabase
+    .from('comments')
+    .select('*')
+    .eq('user_id', id)
+
+  // Attach comments to each todo
+  const todosWithComments = (todosData || []).map(todo => ({
+    ...todo,
+    startDate: todo.start_date ? dayjs(todo.start_date) : undefined,
+    dueDate: todo.due_date ? dayjs(todo.due_date) : undefined,
+    comments: (commentsData || []).filter(c => c.task_id === todo.id)
+  }))
+}
+```
+Handles fetching and managing todos with associated comments from the database.
+
+## 2. Testing
+
+### 2.1 Authentication Tests
+1. Login Test
+   - Input: Valid email and password
+   - Expected: Successful login, redirect to dashboard
+   - Actual: User is logged in and redirected to dashboard
+
+2. Signup Test
+   - Input: New email and password
+   - Expected: Account creation, confirmation email sent
+   - Actual: Account created, confirmation email sent
+
+3. Invalid Login Test
+   - Input: Invalid email/password
+   - Expected: Error message displayed
+   - Actual: Error message shown to user
+
+### 2.2 Logout Tests
+1. Logout Process Test
+   - Input: Click logout button
+   - Expected: 3-second countdown, then logout
+   - Actual: Countdown timer shows, logout completes after 3 seconds
+
+2. Logout Screen Test
+   - Input: During logout
+   - Expected: Animated logout screen with countdown
+   - Actual: Smooth animation, countdown timer visible
+
+### 2.3 Theme Tests
+1. Dark Mode Toggle
+   - Input: Toggle dark mode
+   - Expected: Theme changes, persists on reload
+   - Actual: Theme changes, persists in localStorage
+
+2. Custom Colors
+   - Input: Change UI colors
+   - Expected: Colors update across application
+   - Actual: Colors update and persist
+
+### 2.4 Todo Management Tests
+1. Create Todo
+   - Input: New todo details
+   - Expected: Todo created in database
+   - Actual: Todo appears in list
+
+2. Add Comment
+   - Input: Comment text
+   - Expected: Comment attached to todo
+   - Actual: Comment appears under todo
+
+3. Fetch Todos
+   - Input: User ID
+   - Expected: All user's todos with comments
+   - Actual: Todos loaded with associated comments
+
+## 3. Database Schema
+
+### 3.1 Tables
+1. tasks
+   - id: uuid (primary key)
+   - user_id: uuid (foreign key)
+   - title: text
+   - description: text
+   - completed: boolean
+   - priority: text
+   - start_date: timestamp
+   - due_date: timestamp
+   - created_at: timestamp
+
+2. comments
+   - id: uuid (primary key)
+   - task_id: uuid (foreign key)
+   - user_id: uuid (foreign key)
+   - text: text
+   - created_at: timestamp
+
+3. categories
+   - id: uuid (primary key)
+   - user_id: uuid (foreign key)
+   - name: text
+   - created_at: timestamp 
