@@ -11,6 +11,7 @@ import Analytics from './components/Analytics'
 import { FileOrganizer } from './components/FileOrganizer'
 import { ColorCustomizer } from './components/ColorCustomizer'
 import AuthForm from './components/AuthForm'
+import LogoutScreen from './components/LogoutScreen'
 import { supabase } from './supabaseClient'
 import CalendarView from './components/Calendar'
 import type { Session } from '@supabase/supabase-js'
@@ -50,6 +51,7 @@ function AppContent() {
   // Auth state
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
@@ -67,11 +69,15 @@ function AppContent() {
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
       setUser(session?.user ?? null)
+      if (!session?.user) {
+        setIsLoggingOut(false)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
+  if (isLoggingOut) return <LogoutScreen />
   if (!user) return <AuthForm />
 
   const appliedColors = useCustomColors ? colors : undefined
@@ -94,6 +100,7 @@ function AppContent() {
           currentColors={colors} 
           useCustomColors={useCustomColors}
           setUseCustomColors={setUseCustomColors}
+          onLogout={() => setIsLoggingOut(true)}
         />
       case 'colors':
         return <ColorCustomizer onColorChange={setColors} currentColors={colors} />

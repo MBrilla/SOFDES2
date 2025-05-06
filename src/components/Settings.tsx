@@ -23,7 +23,8 @@ interface SettingsProps {
   onColorChange: (colors: AppColors) => void
   currentColors: AppColors
   useCustomColors: boolean
-  setUseCustomColors: (val: boolean) => void
+  setUseCustomColors: (use: boolean) => void
+  onLogout: () => void
 }
 
 const DEFAULT_COLORS: AppColors = {
@@ -38,7 +39,7 @@ const DEFAULT_COLORS: AppColors = {
   accent: '#40a9ff'
 }
 
-export function Settings({ onColorChange, currentColors, useCustomColors, setUseCustomColors }: SettingsProps) {
+export function Settings({ onColorChange, currentColors, useCustomColors, setUseCustomColors, onLogout }: SettingsProps) {
   const { isDarkMode, toggleDarkMode } = useTheme()
   const [notifications, setNotifications] = useState(true)
   const [autoSave, setAutoSave] = useState(true)
@@ -55,9 +56,10 @@ export function Settings({ onColorChange, currentColors, useCustomColors, setUse
   }, [])
 
   const handleLogout = async () => {
+    onLogout()
+    // Wait for 5 seconds before signing out
+    await new Promise(resolve => setTimeout(resolve, 5000))
     await supabase.auth.signOut()
-    message.success('Logged out successfully')
-    window.location.reload()
   }
 
   const handleSaveSettings = () => {

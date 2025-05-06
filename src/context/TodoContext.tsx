@@ -162,9 +162,9 @@ export function TodoProvider({ children }: { children: ReactNode }) {
 
     // Attach comments to each todo
     const todosWithComments = (todosData || []).map(todo => ({
-      ...todo,
-      startDate: todo.start_date ? dayjs(todo.start_date) : undefined,
-      dueDate: todo.due_date ? dayjs(todo.due_date) : undefined,
+        ...todo,
+        startDate: todo.start_date ? dayjs(todo.start_date) : undefined,
+        dueDate: todo.due_date ? dayjs(todo.due_date) : undefined,
       comments: (commentsData || []).filter(c => c.task_id === todo.id).map(c => ({
         id: c.id,
         text: c.text,
@@ -172,7 +172,7 @@ export function TodoProvider({ children }: { children: ReactNode }) {
         timestamp: c.created_at ? new Date(c.created_at) : new Date()
       })),
       activities: todo.activities || []
-    }))
+      }))
 
     setTodos(todosWithComments)
   }
