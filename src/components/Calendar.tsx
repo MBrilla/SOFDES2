@@ -29,8 +29,6 @@ export default function CalendarView() {
     }
   }
 
-
-
   const cellRender: CalendarProps<Dayjs>['cellRender'] = (current, info) => {
     if (info.type !== 'date') return null
     
@@ -43,12 +41,29 @@ export default function CalendarView() {
       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
         {todosForDay.map(todo => (
           <li key={todo.id} style={{ marginBottom: 4 }}>
-            <Tooltip title={todo.text}>
+            <Tooltip
+              title={
+                <>
+                  <div>{todo.text}</div>
+                  {todo.startDate && (
+                    <div>Start: {dayjs(todo.startDate).format('MMM D, YYYY h:mm A')}</div>
+                  )}
+                  {todo.dueDate && (
+                    <div>Due: {dayjs(todo.dueDate).format('MMM D, YYYY h:mm A')}</div>
+                  )}
+                </>
+              }
+            >
               <Badge
                 status={todo.completed ? 'success' : 'processing'}
                 text={
                   <Text ellipsis style={{ maxWidth: '100%', fontSize: '12px' }}>
                     {todo.text}
+                    {todo.dueDate && (
+                      <span style={{ marginLeft: 4, color: '#888' }}>
+                        ({dayjs(todo.dueDate).format('h:mm A')})
+                      </span>
+                    )}
                   </Text>
                 }
               />
@@ -121,6 +136,16 @@ export default function CalendarView() {
                     </Tag>
                   )}
                 </Space>
+                {start && (
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    Start: {start.format('MMM D, YYYY h:mm A')}
+                  </Text>
+                )}
+                {due && (
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    Due: {due.format('MMM D, YYYY h:mm A')}
+                  </Text>
+                )}
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center',

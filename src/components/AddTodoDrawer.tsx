@@ -134,22 +134,24 @@ export default function AddTodoDrawer({ open, onClose }: AddTodoDrawerProps) {
 
         <Form.Item
           name="startDate"
-          label="Start Date"
+          label="Start Date & Time"
         >
           <DatePicker
+            showTime
             style={{ width: '100%' }}
-            placeholder="Select start date"
+            placeholder="Select start date & time"
             allowClear
           />
         </Form.Item>
 
         <Form.Item
           name="dueDate"
-          label="Due Date"
+          label="Due Date & Time"
         >
           <DatePicker
+            showTime
             style={{ width: '100%' }}
-            placeholder="Select due date"
+            placeholder="Select due date & time"
             allowClear
           />
         </Form.Item>

@@ -304,8 +304,8 @@ export function TodoProvider({ children }: { children: ReactNode }) {
       text: text,
       completed: false,
       category: category || null,
-      start_date: startDate ? startDate.format('YYYY-MM-DD') : null,
-      due_date: dueDate ? dueDate.format('YYYY-MM-DD') : null,
+      start_date: startDate ? startDate.toISOString() : null,
+      due_date: dueDate ? dueDate.toISOString() : null,
       priority: priority || null,
       color: color || null
     }

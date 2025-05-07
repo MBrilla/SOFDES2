@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Input, Button, List, Checkbox, Space, Card, Radio, Empty, DatePicker, Tag, Select, Row, Col, Statistic, Dropdown, Menu, Typography, Drawer, theme, Form } from 'antd'
 import { DeleteOutlined, SearchOutlined, PlusOutlined, DownOutlined, SortAscendingOutlined, SortDescendingOutlined, EditOutlined, CommentOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
@@ -9,6 +9,7 @@ import dayjs from 'dayjs'
 import { motion } from 'framer-motion'
 import TaskComments from './TaskComments'
 import { useTheme } from '../context/ThemeContext'
+import type { Todo } from '../context/TodoContext'
 
 const { Option } = Select
 const { Text } = Typography
@@ -30,6 +31,10 @@ interface EditFormValues {
   dueDate?: dayjs.Dayjs
 }
 
+interface TodoWithCreatedAt extends Todo {
+  created_at?: string;
+}
+
 export default function TodoList() {
   const { 
     todos, 
@@ -37,8 +42,7 @@ export default function TodoList() {
     deleteTodo,
     toggleTodo,
     updateTodo,
-    addComment,
-    getFilteredTodos
+    addComment
   } = useTodo()
   const { isDarkMode } = useTheme()
   const { token } = useToken()
@@ -53,15 +57,14 @@ export default function TodoList() {
   const [selectedTodos, setSelectedTodos] = useState<Set<string>>(new Set())
   const [editingTodo, setEditingTodo] = useState<string | null>(null)
   const [selectedTodo, setSelectedTodo] = useState<string | null>(null)
-  const [filters, setFilters] = useState({
-    dateRange: null as [Date, Date] | null,
-    categories: [] as string[],
-    priorities: [] as string[]
-  })
+  const [currentTime, setCurrentTime] = useState(dayjs().format('hh:mm:ss A'))
 
-  const clearCompleted = () => {
-    todos.filter(todo => todo.completed).forEach(todo => deleteTodo(todo.id))
-  }
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(dayjs().format('hh:mm:ss A'))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return
@@ -71,15 +74,48 @@ export default function TodoList() {
     items.splice(result.destination.index, 0, reorderedItem)
   }
 
-  const filteredTodos = getFilteredTodos(filters)
+  const visibleTodos = useMemo(() => {
+    let result = [...(todos as TodoWithCreatedAt[])]
 
-  const handleFilterChange = (newFilters: {
-    dateRange: [Date, Date] | null
-    categories: string[]
-    priorities: string[]
-  }) => {
-    setFilters(newFilters)
-  }
+    if (searchText.trim()) {
+      result = result.filter(todo =>
+        todo.text.toLowerCase().includes(searchText.toLowerCase())
+      )
+    }
+
+    if (selectedCategory) {
+      result = result.filter(todo => todo.category === selectedCategory)
+    }
+
+    if (filter === 'active') {
+      result = result.filter(todo => !todo.completed)
+    } else if (filter === 'completed') {
+      result = result.filter(todo => todo.completed)
+    }
+
+    result.sort((a, b) => {
+      if (sortBy === 'priority') {
+        const order = { high: 1, medium: 2, low: 3 }
+        return (order[a.priority || 'low'] - order[b.priority || 'low']) * (sortOrder === 'asc' ? 1 : -1)
+      }
+      if (sortBy === 'dueDate') {
+        const aDate = a.dueDate ? dayjs(a.dueDate) : dayjs(0)
+        const bDate = b.dueDate ? dayjs(b.dueDate) : dayjs(0)
+        return (aDate.isAfter(bDate) ? 1 : -1) * (sortOrder === 'asc' ? 1 : -1)
+      }
+      if (sortBy === 'alphabetical') {
+        return (a.text.localeCompare(b.text)) * (sortOrder === 'asc' ? 1 : -1)
+      }
+      if (sortBy === 'createdAt') {
+        const aDate = a.created_at ? dayjs(a.created_at) : dayjs(0)
+        const bDate = b.created_at ? dayjs(b.created_at) : dayjs(0)
+        return (aDate.isAfter(bDate) ? 1 : -1) * (sortOrder === 'asc' ? 1 : -1)
+      }
+      return 0
+    })
+
+    return result
+  }, [todos, searchText, selectedCategory, filter, sortBy, sortOrder])
 
   const handleComment = (todoId: string) => {
     setSelectedTodo(todoId)
@@ -263,6 +299,9 @@ export default function TodoList() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <div style={{ textAlign: 'right', marginBottom: 16, fontWeight: 'bold', fontSize: 18 }}>
+        Current Time: {currentTime}
+      </div>
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -380,11 +419,11 @@ export default function TodoList() {
               <Droppable droppableId="todos">
                 {(provided) => (
                   <div {...provided.droppableProps} ref={provided.innerRef}>
-                    {filteredTodos.length === 0 ? (
+                    {visibleTodos.length === 0 ? (
                       <Empty description="No todos found" />
                     ) : (
                       <List
-                        dataSource={filteredTodos}
+                        dataSource={visibleTodos}
                         renderItem={(todo, index) => (
                           <Draggable key={todo.id} draggableId={todo.id} index={index}>
                             {(provided) => (
@@ -419,6 +458,19 @@ export default function TodoList() {
                                               {todo.description}
                                             </Text>
                                           )}
+                                          {todo.startDate && (
+                                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                                              Start: {dayjs(todo.startDate).format('MMM D, YYYY h:mm A')}
+                                            </Text>
+                                          )}
+                                          {todo.dueDate && (
+                                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                                              Due: {dayjs(todo.dueDate).format('MMM D, YYYY h:mm A')}
+                                            </Text>
+                                          )}
+                                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                                            Created: {todo.created_at ? dayjs(todo.created_at).format('MMM D, YYYY h:mm A') : 'N/A'}
+                                          </Text>
                                           <Space wrap>
                                             {todo.category && (
                                               <Tag color="blue">{todo.category}</Tag>
@@ -426,11 +478,6 @@ export default function TodoList() {
                                             {todo.priority && (
                                               <Tag color={getPriorityColor(todo.priority)}>
                                                 {todo.priority}
-                                              </Tag>
-                                            )}
-                                            {todo.dueDate && (
-                                              <Tag color="purple">
-                                                Due: {todo.dueDate.format('MMM D, YYYY')}
                                               </Tag>
                                             )}
                                           </Space>
